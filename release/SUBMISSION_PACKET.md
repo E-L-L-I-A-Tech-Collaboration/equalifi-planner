@@ -47,8 +47,10 @@ Prepared 2026-10-21. Status key: ✅ ready · ⏳ waiting · ❓ verify in Conso
   (email, user ID — Firebase Auth) and financial info entered by the user
   (income, debts, goals — stored in Firestore). Data encrypted in transit;
   not sold; not shared with third parties for advertising. Account/data
-  deletion path: ❓ confirm the in-app account-deletion flow before answering
-  "yes" on the form — Play requires a working deletion URL/mechanism.
+  deletion: ✅ in-app flow built 2026-10-21 (account menu → Delete Account:
+  re-authenticates, deletes Firestore profile + plan docs, then the Firebase
+  user; warns that deletion does NOT cancel the Play subscription) plus
+  contact-email deletion via the privacy policy. Answer "yes" on the form.
 - **Content rating:** questionnaire — finance reference/educational tool, no
   objectionable content; expected outcome Everyone.
 - **Target audience:** 18+ (financial product).

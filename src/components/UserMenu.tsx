@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, logOut } from '../firebase';
-import { Cloud, CloudCheck, CloudUpload, LogOut, ChevronDown, UserCheck, ShieldAlert, Sparkles } from 'lucide-react';
+import { User, logOut, deleteAccount } from '../firebase';
+import { Cloud, CloudCheck, CloudUpload, LogOut, ChevronDown, UserCheck, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
 
 interface UserMenuProps {
   user: User | null;
@@ -11,6 +11,10 @@ interface UserMenuProps {
 
 export default function UserMenu({ user, syncStatus, onOpenAuth, onManualSync }: UserMenuProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on click outside
@@ -30,6 +34,28 @@ export default function UserMenu({ user, syncStatus, onOpenAuth, onManualSync }:
       setDropdownOpen(false);
     } catch (err) {
       console.error('Sign out error:', err);
+    }
+  };
+
+  const needsPassword = !!user?.providerData.some((p) => p.providerId === 'password');
+
+  const handleDeleteAccount = async () => {
+    setDeleteError('');
+    setDeleting(true);
+    try {
+      await deleteAccount(needsPassword ? deletePassword : undefined);
+      setDeleteOpen(false);
+      setDropdownOpen(false);
+      setDeletePassword('');
+    } catch (err: any) {
+      console.error('Delete account error:', err);
+      setDeleteError(
+        err?.code === 'auth/wrong-password' || err?.code === 'auth/invalid-credential'
+          ? 'That password was not accepted. Try again.'
+          : err?.message || 'Account deletion failed. Please try again.'
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -136,6 +162,88 @@ export default function UserMenu({ user, syncStatus, onOpenAuth, onManualSync }:
             <LogOut className="w-4 h-4 text-zinc-500" />
             <span>Sign Out (Switch to Guest)</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteError('');
+              setDeletePassword('');
+              setDeleteOpen(true);
+              setDropdownOpen(false);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors text-left cursor-pointer"
+          >
+            <Trash2 className="w-4 h-4 text-red-500" />
+            <span>Delete Account</span>
+          </button>
+        </div>
+      )}
+
+      {/* Delete account confirmation */}
+      {deleteOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-base font-bold text-zinc-900">Delete your account?</h3>
+            <p className="mt-2 text-sm text-zinc-600">
+              This permanently deletes your EqualiF.I. account and your cloud-saved plan
+              data. This cannot be undone.
+            </p>
+            <p className="mt-2 text-sm text-zinc-600">
+              Deleting your account does <strong>not</strong> cancel a Google Play
+              subscription. To stop future charges, cancel it in{' '}
+              <a
+                href="https://play.google.com/store/account/subscriptions"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-blue-700 underline"
+              >
+                Google Play &gt; Subscriptions
+              </a>{' '}
+              before deleting.
+            </p>
+
+            {needsPassword && (
+              <div className="mt-4">
+                <label htmlFor="delete-account-password" className="text-xs font-semibold text-zinc-700">
+                  Confirm your password
+                </label>
+                <input
+                  id="delete-account-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none"
+                  placeholder="Password"
+                />
+              </div>
+            )}
+
+            {deleteError && (
+              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleting}
+                className="flex-1 rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 cursor-pointer"
+              >
+                Keep account
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleting || (needsPassword && !deletePassword)}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 cursor-pointer"
+              >
+                {deleting ? 'Deleting…' : 'Delete my account'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

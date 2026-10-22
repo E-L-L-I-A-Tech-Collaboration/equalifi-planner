@@ -1,21 +1,26 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInWithPopup, 
-  signOut, 
-  GoogleAuthProvider, 
+import {
+  getAuth,
+  signInWithPopup,
+  signOut,
+  GoogleAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
   onAuthStateChanged,
-  User 
+  deleteUser,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  EmailAuthProvider,
+  User
 } from 'firebase/auth';
-import { 
-  getFirestore, 
-  doc, 
-  getDoc, 
-  setDoc, 
-  serverTimestamp 
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  deleteDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -84,6 +89,40 @@ export async function registerWithEmail(email: string, pass: string, name?: stri
 
 export async function logOut() {
   await signOut(auth);
+}
+
+/**
+ * Permanently delete the signed-in user's account and their cloud data
+ * (users/{uid} profile doc and users/{uid}/plans/active plan doc).
+ * Firebase requires a recent login for account deletion, so the user is
+ * re-authenticated first: email/password accounts pass their password in;
+ * Google accounts re-authenticate via popup.
+ * NOTE: this does NOT cancel any Google Play subscription — billing is
+ * managed by the user in Google Play, and the UI says so before confirming.
+ */
+export async function deleteAccount(password?: string) {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('No signed-in user to delete.');
+  }
+
+  const providers = user.providerData.map((p) => p.providerId);
+  if (providers.includes('password')) {
+    if (!password || !user.email) {
+      throw new Error('Enter your password to delete this account.');
+    }
+    await reauthenticateWithCredential(
+      user,
+      EmailAuthProvider.credential(user.email, password)
+    );
+  } else if (providers.includes('google.com')) {
+    await reauthenticateWithPopup(user, googleProvider);
+  }
+
+  // Delete cloud data first so nothing is orphaned if account deletion fails.
+  await deleteDoc(doc(db, 'users', user.uid, 'plans', 'active'));
+  await deleteDoc(doc(db, 'users', user.uid));
+  await deleteUser(user);
 }
 
 export async function savePlanToCloud(userId: string, planData: any) {
