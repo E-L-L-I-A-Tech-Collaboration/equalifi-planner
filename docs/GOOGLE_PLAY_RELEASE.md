@@ -19,8 +19,9 @@ Status key: ✅ done in this repo · ⏳ needs Play Console / Zebulon action
   (required for the Digital Goods API / Play Billing in a TWA).
 - Google Play Billing in-app via the Digital Goods API
   (`src/billing/`, `src/components/PaywallModal.tsx`):
-  - Free inside the Android app: assessment steps 1–8.
-  - Premium: Dashboard, Scenarios, Report (steps 9–11) + saved scenarios.
+  - HARD GATE inside the Android app (decided 2026-10-21): the whole
+    planner requires an active subscription; a 7-day free trial counts
+    as active. No free steps.
   - On the open web the billing API does not exist, so the planner stays
     ungated and the paywall explains the Android app.
 - `public/privacy.html` privacy policy page.
