@@ -29,28 +29,40 @@ Status key: ✅ done in this repo · ⏳ needs Play Console / Zebulon action
   target SDK 36 line). Gradle cannot run on the agent VM, so the AAB is
   built in GitHub Actions.
 
-## Subscription products — REMOVED (2026-10-10)
+## Subscription products — RESTORED (2026-10-21)
 
-The paywall was removed and the app is now fully free and open source (AGPL-3.0). Do not create Play subscription products.
+The paywall was removed on 2026-10-10 (fully free), then Zebulon
+directed a Play subscription again on 2026-10-21 as a per-product
+exception: **7-day free trial, then $11.99/month, HARD GATE** — inside
+the Android app the whole planner requires an active subscription
+(a trial counts as active). The billing code (Digital Goods API) is
+restored in `src/billing/` + `src/components/PaywallModal.tsx`; the
+Oct Stripe web paywall is NOT restored. The open web stays ungated
+(Digital Goods cannot run there).
 
-### (Obsolete) Subscription products (create in Play Console)
+### Subscription product (create in Play Console)
 
 Monetize → Subscriptions → Create subscription:
 
 | Product ID | Base plan | Price (USD) | Period |
 |---|---|---|---|
-| `equalifi_monthly` | monthly (auto-renewing) | $15.99 | 1 month |
-| `equalifi_yearly` | yearly (auto-renewing) | $100.99 | 1 year |
+| `equalifi_monthly` | monthly (auto-renewing) | $11.99 | 1 month |
 
-- The product IDs above must match `src/billing/plans.ts` exactly.
+- The product ID above must match `src/billing/plans.ts` exactly.
 - Set the US price as above; let Play auto-convert for other countries.
-- Activate both base plans.
+- Activate the base plan.
+- Add an **introductory offer** to the base plan: **free trial, 7 days**,
+  eligible for new subscribers. The trial lives in Play Console, not
+  in code; the app's purchase UI copy reflects it.
+- Creating subscriptions requires a completed Google Payments
+  merchant profile — the step that blocked this in Oct 2026.
 
 ## ⏳ Play Console steps (need Zebulon's go-ahead)
 
 1. Create app "EqualiF.I. Planner" (app, free with in-app purchases,
    category Finance) under the Axiom Zeta Innovations developer account.
-2. Create the two subscription products above and activate base plans.
+2. Create the subscription product above, activate its base plan, and
+   add the 7-day free-trial introductory offer.
 3. Generate the upload keystore (done locally — see below), then set repo
    secrets `ANDROID_KEYSTORE_BASE64`, `BUBBLEWRAP_KEYSTORE_PASSWORD`,
    `BUBBLEWRAP_KEY_PASSWORD`; run the "Build Android App Bundle" workflow;

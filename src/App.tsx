@@ -28,6 +28,8 @@ import AuthModal from './components/AuthModal';
 import UserMenu from './components/UserMenu';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import PaywallModal from './components/PaywallModal';
+import { useSubscription } from './billing/useSubscription';
 
 import { ShieldCheck, User as UserIcon, Calendar, Trash2, HelpCircle, AlertTriangle, Sparkles, RefreshCw, FileText, ChevronRight, ChevronLeft, Cloud, CloudCheck } from 'lucide-react';
 
@@ -51,6 +53,14 @@ export default function App() {
   const goToStep = React.useCallback((id: number) => {
     setActiveStep(id);
   }, []);
+
+  // Google Play subscription (Digital Goods API). HARD GATE inside the
+  // Android app: the whole planner requires an active subscription
+  // (a 7-day free trial counts as active — Play reports it as a
+  // purchase). On the open web the Digital Goods API does not exist,
+  // status stays 'unavailable', and the planner runs ungated.
+  const sub = useSubscription();
+  const [paywallOpen, setPaywallOpen] = React.useState(false);
 
   // Core Orchestration States
   const [household, setHousehold] = React.useState<HouseholdProfile>({
@@ -441,6 +451,32 @@ export default function App() {
     }
   };
 
+  // Hard gate (Android app only): render no planner UI until the
+  // subscription check resolves, and none at all while there is no
+  // active subscription. 'premium' and 'unavailable' (open web) fall
+  // through to the full planner below.
+  if (sub.status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-100 via-slate-50 to-zinc-200/80 flex items-center justify-center">
+        <p className="text-sm font-semibold text-zinc-500">
+          Checking subscription…
+        </p>
+      </div>
+    );
+  }
+  if (sub.status === 'free') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-100 via-slate-50 to-zinc-200/80">
+        <PaywallModal
+          isOpen
+          blocking
+          onClose={() => {}}
+          sub={sub}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-100 via-slate-50 to-zinc-200/80 text-zinc-900 font-sans flex flex-col justify-between antialiased selection:bg-blue-200 selection:text-blue-950 relative overflow-x-hidden">
       {/* Ambient background glows to enhance glassmorphism refraction */}
@@ -485,6 +521,14 @@ export default function App() {
             Reset
           </button>
 
+          {/* Premium / Google Play subscription */}
+          <button
+            type="button"
+            onClick={() => setPaywallOpen(true)}
+            className="px-3 py-1.5 bg-amber-50/80 hover:bg-amber-100/90 text-amber-800 border border-amber-300/60 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 backdrop-blur-xs"
+          >
+            {sub.status === 'premium' ? 'Premium ✓' : 'Go Premium'}
+          </button>
 
           {/* In-App PWA Install Prompt */}
           <PWAInstallButton />
@@ -672,6 +716,14 @@ export default function App() {
         }}
       />
 
+
+      {/* Google Play Premium Paywall (info/purchase sheet; the hard
+          gate for unsubscribed Android users renders earlier) */}
+      <PaywallModal
+        isOpen={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        sub={sub}
+      />
 
       {/* Offline Connectivity Banner */}
       <OfflineIndicator />
